@@ -6,8 +6,14 @@ class OnboardingTutorial:
         "text": {
             "type": "mrkdwn",
             "text": (
-                "Welcome to Slack! :wave: We're so glad you're here. :blush:\n\n"
-                "*Get started by completing the steps below:*"
+                "Welcome to Logging! :wave:\n\n"
+                "*PLEASE READ THE FAQ: * https://bit.ly/2IJSzNV\n\n"
+                "If your question is not answered in the FAQ feel free to tag @aoslogging "
+                "in this thread or email us at team-logging@redhat.com\n\n"
+                "If you want to *provide more information* please *say it in this thread* "
+                "We will get back to you *as soon as possible*. If you have not heard a response "
+                "*within 6 hours* please reach out again by tagging @aoslogging in this thread\n\n"
+                "Thank you\n\n  - The Logging Team"
             ),
         },
     }
@@ -15,58 +21,27 @@ class OnboardingTutorial:
 
     def __init__(self, channel):
         self.channel = channel
-        self.username = "pythonboardingbot"
+        self.username = "Logging Bot"
         self.icon_emoji = ":robot_face:"
         self.timestamp = ""
-        self.reaction_task_completed = False
-        self.pin_task_completed = False
 
-    def get_message_payload(self):
-        return {
-            "ts": self.timestamp,
+    def get_message_payload(self, thread_ts: str, user: str):
+        res = {
             "channel": self.channel,
             "username": self.username,
             "icon_emoji": self.icon_emoji,
+            "timestamp": self.timestamp,
             "blocks": [
                 self.WELCOME_BLOCK,
-                self.DIVIDER_BLOCK,
-                *self._get_reaction_block(),
-                self.DIVIDER_BLOCK,
-                *self._get_pin_block(),
             ],
         }
 
-    def _get_reaction_block(self):
-        task_checkmark = self._get_checkmark(self.reaction_task_completed)
-        text = (
-            f"{task_checkmark} *Add an emoji reaction to this message* :thinking_face:\n"
-            "You can quickly respond to any message on Slack with an emoji reaction."
-            "Reactions can be used for any purpose: voting, checking off to-do items, showing excitement."
-        )
-        information = (
-            ":information_source: *<https://get.slack.help/hc/en-us/articles/206870317-Emoji-reactions|"
-            "Learn How to Use Emoji Reactions>*"
-        )
-        return self._get_task_block(text, information)
+        if thread_ts:
+            res["thread_ts"] = thread_ts
+        if user:
+            res["user"] = user
 
-    def _get_pin_block(self):
-        task_checkmark = self._get_checkmark(self.pin_task_completed)
-        text = (
-            f"{task_checkmark} *Pin this message* :round_pushpin:\n"
-            "Important messages and files can be pinned to the details pane in any channel or"
-            " direct message, including group messages, for easy reference."
-        )
-        information = (
-            ":information_source: *<https://get.slack.help/hc/en-us/articles/205239997-Pinning-messages-and-files"
-            "|Learn How to Pin a Message>*"
-        )
-        return self._get_task_block(text, information)
-
-    @staticmethod
-    def _get_checkmark(task_completed: bool) -> str:
-        if task_completed:
-            return ":white_check_mark:"
-        return ":white_large_square:"
+        return res
 
     @staticmethod
     def _get_task_block(text, information):
