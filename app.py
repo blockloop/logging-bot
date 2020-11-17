@@ -14,28 +14,36 @@ app = Flask(__name__)
 slack_events_adapter = SlackEventAdapter(os.environ["SLACK_SIGNING_SECRET"], "/slack/events", app)
 
 # Initialize a Web API client
-slack_web_client = WebClient(token=os.environ["SLACK_BOT_TOKEN"])
+slack_client = WebClient(token=os.environ["SLACK_BOT_TOKEN"])
+# send a test message to make sure we can access what we need
+slack_client.api_test()
 
+# list of words that will trigger the onboarding response
 trigger_words = set(
     # filter out empty strings
     word.strip() for word in os.getenv("ONBOARD_TRIGGER_WORDS", "").split(",") if word
 )
+
+# users who should not trigger responses
 ignored_users = set(
     # filter out empty strings
     user.strip() for user in os.getenv("ONBOARD_IGNORE_USERS", "").split(",") if user
 )
 
+# list of admin subgroups that should be considered bot admins
 admin_groups = {}
 for group in os.getenv("ONBOARD_ADMIN_GROUPS", "").split(","):
     group = group.strip()
     if not group:  # exclude empty strings
         continue
     try:
-        response = slack_web_client.usergroups_users_list(usergroup=group)
+        response = slack_client.usergroups_users_list(usergroup=group)
         admin_groups[group] = response.get("users", [])
     except SlackApiError as err:
-        logging.error("failed to list users for group '%s': Error: '%s'", group, err.response["error"])
+        logging.error("failed to list users for group '%s': Error: '%s'",
+                      group, err.response["error"])
 
+# list of commands and their message responses
 commands = {
     "!welcome": {
         "blocks": [consts.WELCOME_BLOCK]
@@ -46,6 +54,13 @@ commands = {
     "!faq": {
         "blocks": [consts.FAQ_BLOCK]
     },
+}
+# add a help command
+commands["!commands"] = {
+    "text": "\n".join(commands.keys()),
+}
+commands["!help"] = {
+    "text": "\n".join(commands.keys()),
 }
 
 
@@ -64,9 +79,9 @@ def onboard_user(user: str, channel: str, thread_ts="", ephemeral=False):
 
     # Post the onboarding message in Slack
     if ephemeral:
-        slack_web_client.chat_postEphemeral(**message)
+        slack_client.chat_postEphemeral(**message)
     else:
-        slack_web_client.chat_postMessage(**message)
+        slack_client.chat_postMessage(**message)
 
 
 def execute_command(cmd: str, user: str, channel: str, thread_ts=""):
@@ -86,7 +101,7 @@ def execute_command(cmd: str, user: str, channel: str, thread_ts=""):
 
     message.update(commands[cmd])
 
-    return slack_web_client.chat_postMessage(**message)
+    return slack_client.chat_postMessage(**message)
 
 
 # ================ Member Joined Channel Event =============== #
@@ -107,7 +122,7 @@ def onboarding_message(payload):
     user = event.get("user")
 
     # Open a DM with the new user.
-    # response = slack_web_client.im_open(user=user)
+    # response = slack_client.im_open(user=user)
     # channel = response["channel"]["id"]
 
     # Post the onboarding message.
