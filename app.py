@@ -1,38 +1,29 @@
 """
 Logging Bot is used in slack for logging team public channels
 """
-import os
 import logging
 from flask import Flask
 from slack_sdk.web import WebClient
 from slack_sdk.errors import SlackApiError
 from slackeventsapi import SlackEventAdapter
 import consts
+import config
 
 # Initialize a Flask app to host the events adapter
 app = Flask(__name__)
-slack_events_adapter = SlackEventAdapter(os.environ["SLACK_SIGNING_SECRET"], "/slack/events", app)
+slack_events_adapter = SlackEventAdapter(config.SlackSigningSecret, "/slack/events", app)
 
 # Initialize a Web API client
-slack_client = WebClient(token=os.environ["SLACK_BOT_TOKEN"])
+slack_client = WebClient(token=config.SlackBotToken)
 # send a test message to make sure we can access what we need
 slack_client.api_test()
 
-# list of words that will trigger the onboarding response
-trigger_words = set(
-    # filter out empty strings
-    word.strip() for word in os.getenv("ONBOARD_TRIGGER_WORDS", "").split(",") if word
-)
-
-# users who should not trigger responses
-ignored_users = set(
-    # filter out empty strings
-    user.strip() for user in os.getenv("ONBOARD_IGNORE_USERS", "").split(",") if user
-)
 
 # list of admin subgroups that should be considered bot admins
 admin_groups = {}
-for group in os.getenv("ONBOARD_ADMIN_GROUPS", "").split(","):
+# loop through the configured groups and get a list of users in those groups
+# so we can cache the admin users
+for group in config.OnboardAdminGroups:
     group = group.strip()
     if not group:  # exclude empty strings
         continue
@@ -43,7 +34,7 @@ for group in os.getenv("ONBOARD_ADMIN_GROUPS", "").split(","):
         logging.error("failed to list users for group '%s': Error: '%s'",
                       group, err.response["error"])
 
-# list of commands and their message responses
+# list of commands that can be executed and their message responses
 commands = {
     "!welcome": {
         "blocks": [consts.WELCOME_BLOCK]
@@ -55,7 +46,7 @@ commands = {
         "blocks": [consts.FAQ_BLOCK]
     },
 }
-# add a help command
+# add help commands
 commands["!commands"] = {
     "text": "\n".join(commands.keys()),
 }
@@ -162,7 +153,7 @@ def on_message(payload):
         # to be executed in the thread
         return execute_command(text.lower(), user, channel_id, event.get("thread_ts"))
 
-    for trigger in trigger_words:
+    for trigger in config.TriggerWords:
         if trigger in text:
             # if thread_ts then this is already a thread, otherwise create a new thread
             # using the ts of the message
@@ -186,7 +177,7 @@ def on_subteam_updated(payload):
 
     new_users = subteam.get("users")
 
-    if team in admin_groups:
+    if new_users and team in admin_groups:
         admin_groups[team].users = new_users
         return
 
@@ -203,5 +194,4 @@ if __name__ == "__main__":
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
     logger.addHandler(logging.StreamHandler())
-
     app.run(port=3000)
