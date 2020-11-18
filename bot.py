@@ -43,6 +43,7 @@ class LoggingBot():
                 logging.error("failed to list users for group '%s': Error: '%s'",
                               group, err.response["error"])
 
+    # pylint: disable=invalid-name
     def handle_message(self, channel: str, user: str, text: str,
                        ts="", thread_ts="", bot_profile="", **kwargs) -> bool:
         """handle a new message"""
