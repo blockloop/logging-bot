@@ -1,6 +1,7 @@
 astroid==2.4.2
 attrs==20.3.0
 click==7.1.2
+coverage==5.3
 flake8==3.8.4
 Flask==1.1.2
 iniconfig==1.1.1
@@ -20,6 +21,7 @@ pyflakes==2.2.0
 pylint==2.6.0
 pyparsing==2.4.7
 pytest==6.1.2
+pytest-cov==2.10.1
 six==1.15.0
 slack-sdk==3.0.0
 slackeventsapi==2.2.1

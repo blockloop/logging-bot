@@ -5,12 +5,55 @@ from unittest.mock import MagicMock
 from slack_sdk.web import WebClient
 
 import consts
-from bot import LoggingBot, new_message
+from bot import LoggingBot
 
 
 class AnyStringWith(str):
     def __eq__(self, other):
         return self in other
+
+class HandleSubteamUpdate(unittest.TestCase):
+    def testOnlyUpdatesObservedTeams(self):
+        team = "myteam"
+        user = "me"
+        channel = "challen_abcd"
+
+        tests = [
+            ([], [], False),
+            ([team], [], False),
+            ([], [user], False),
+            ([team], [user], True),
+            ([team], [user, "user2"], True),
+        ]
+
+        client = WebClient()
+        client.usergroups_users_list = MagicMock(return_value={"users": []})
+        for observed_groups, new_users, should_update in tests:
+            subject = LoggingBot(client, [], [channel], observed_groups, [])
+            subject.handle_subteam_update(team, new_users)
+            if should_update:
+                self.assertEqual(new_users, subject.admin_groups[team])
+
+
+    def testOnlyUpdatesIfUsersAndTeamAreProvided(self):
+        team = "myteam"
+        user = "me"
+        channel = "challen_abcd"
+
+        tests = [
+            ("", [], False),
+            (team, [], False),
+            ("", [user], False),
+            (team, [user], True),
+        ]
+
+        client = WebClient()
+        client.usergroups_users_list = MagicMock(return_value={"users": []})
+        for team, users, should_handle in tests:
+            subject = LoggingBot(client, [], [channel], [team], [])
+            handled = subject.handle_subteam_update(team, users)
+            self.assertEqual(should_handle, handled, "Team=%s User=%s" % (team, user))
+
 
 class HandleMessage(unittest.TestCase):
     def testIgnoresBotMessages(self):
@@ -74,7 +117,7 @@ class HandleMessage(unittest.TestCase):
         self.assertFalse(thread_ts)
 
 
-    def testTriggers(self):
+    def testTriggers_TriggerWords(self):
         client = WebClient()
         client.chat_postMessage = MagicMock()
 
@@ -90,6 +133,21 @@ class HandleMessage(unittest.TestCase):
 
             if handled:
                 self.assertEqual(user, client.chat_postMessage.call_args.kwargs.get("user"))
+
+    def testTriggers_UsesThreads(self):
+        client = WebClient()
+        client.chat_postMessage = MagicMock()
+
+        user = "user"
+        channel = "channel"
+        trigger_word = "help me"
+
+        subject = LoggingBot(client, [trigger_word], [channel], [], [])
+
+        handled = subject.handle_message(channel, user, trigger_word, ts="ts")
+        self.assertEqual(True, handled)
+
+        self.assertNotEqual("", client.chat_postMessage.call_args.kwargs.get("thread_ts", ""))
 
 
 if __name__ == '__main__':

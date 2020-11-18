@@ -1,6 +1,6 @@
 
 test:
-	pytest
+	pytest --cov=bot
 
 lint:
 	pylint *.py
