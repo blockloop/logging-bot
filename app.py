@@ -81,7 +81,7 @@ def execute_command(cmd: str, user: str, channel: str, thread_ts=""):
         logging.error("unknown command '%s' from user '%s'", cmd, user)
         return None
 
-    logger.debug("triggered command: user='%s', cmd='%s'", user, cmd)
+    logging.debug("triggered command: user='%s', cmd='%s'", user, cmd)
     message = {
         "channel": channel,
         "username": user,
@@ -124,22 +124,32 @@ def onboarding_message(payload):
 # This event is handled any time a message is posted to any channel
 # that this bot is monitoring.
 #
-# CAVEAT: this also receives events created by other bots and itself
-# so it's possible to get into a loop if you don't capture "bot_profile"
-# and exit.
+# CAVEATS:
+#   1. This also receives events created by other bots and itself
+#      so it's possible to get into a loop if you don't capture "bot_profile"
+#      and exit.
+#   2. This will trigger for all messages in any channel Logging Bot is in.
+#      If the bot is inadvertently added to a channel it will react to trigger
+#      words in that channel. To avoid any confusion we use the ONBOARD_CHANNELS
+#      env var to limit the scope of the bot.
 @slack_events_adapter.on("message")
 def on_message(payload):
     """Display the onboarding welcome message after receiving a triggering message
     """
     event = payload.get("event", {})
 
-    channel_id = event.get("channel")
+    channel = event.get("channel")
+
+    if channel not in config.OnboardChannels:
+        logging.debug("ignoring message in unmonitored (%s channel)", channel)
+        return None
+
     user = event.get("user")
     text = event.get("text")
 
     if event.get("bot_profile"):
         # this is a bot, possibly myself. Ignore it
-        logger.debug("ignoring bot message")
+        logging.debug("ignoring bot message")
         return None
 
     if not text:
@@ -151,15 +161,15 @@ def on_message(payload):
         # in the main channel you don't want it to be started in a thread.
         # If, however, this command was executed in a thread you want it
         # to be executed in the thread
-        return execute_command(text.lower(), user, channel_id, event.get("thread_ts"))
+        return execute_command(text.lower(), user, channel, event.get("thread_ts"))
 
     for trigger in config.TriggerWords:
         if trigger in text:
             # if thread_ts then this is already a thread, otherwise create a new thread
             # using the ts of the message
             thread_ts = event.get("thread_ts") or event.get("ts")
-            logger.debug("triggered word: '%s'. Text: '%s'", trigger, text)
-            return onboard_user(user, channel_id, thread_ts)
+            logging.debug("triggered word: '%s'. Text: '%s'", trigger, text)
+            return onboard_user(user, channel, thread_ts)
 
     return None
 
@@ -173,7 +183,7 @@ def on_subteam_updated(payload):
     subteam = payload.get("subteam")
     team = subteam.get("id")
 
-    logger.debug("subteam_updated", team=team)
+    logging.debug("subteam_updated", team=team)
 
     new_users = subteam.get("users")
 
@@ -191,7 +201,10 @@ def is_admin(user: str) -> bool:
 
 
 if __name__ == "__main__":
-    logger = logging.getLogger()
-    logger.setLevel(logging.DEBUG)
-    logger.addHandler(logging.StreamHandler())
+    logging.basicConfig(
+        format='%(asctime)s %(levelname)-8s %(message)s',
+        level=logging.DEBUG,
+        datefmt='%Y-%m-%d %H:%M:%S',
+        handlers=[logging.StreamHandler()],
+    )
     app.run(port=3000)
