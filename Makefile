@@ -1,4 +1,7 @@
 
+test:
+	pytest
+
 lint:
 	pylint *.py
 	pyflakes *.py
