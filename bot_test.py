@@ -13,7 +13,7 @@ class AnyStringWith(str):
         return self in other
 
 class HandleSubteamUpdate(unittest.TestCase):
-    def testOnlyUpdatesObservedTeams(self):
+    def test_only_updates_observed_teams(self):
         team = "myteam"
         user = "me"
         channel = "challen_abcd"
@@ -35,7 +35,7 @@ class HandleSubteamUpdate(unittest.TestCase):
                 self.assertEqual(new_users, subject.admin_groups[team])
 
 
-    def testOnlyUpdatesIfUsersAndTeamAreProvided(self):
+    def test_only_updates_if_users_and_team_are_provided(self):
         team = "myteam"
         user = "me"
         channel = "challen_abcd"
@@ -56,7 +56,7 @@ class HandleSubteamUpdate(unittest.TestCase):
 
 
 class HandleMessage(unittest.TestCase):
-    def testIgnoresBotMessages(self):
+    def test_ignores_bot_messages(self):
         client = WebClient()
         client.chat_postMessage = MagicMock()
         logging.debug = MagicMock()
@@ -67,7 +67,7 @@ class HandleMessage(unittest.TestCase):
         client.chat_postMessage.assert_not_called()
         logging.debug.assert_called_with(AnyStringWith("bot"))
 
-    def testIgnoresUnmonitoredChannels(self):
+    def test_ignores_unmonitored_channels(self):
         client = WebClient()
         client.chat_postMessage = MagicMock()
 
@@ -76,7 +76,7 @@ class HandleMessage(unittest.TestCase):
         self.assertFalse(handled)
         client.chat_postMessage.assert_not_called()
 
-    def testExecutesCommandsInThreads(self):
+    def test_executes_commands_in_threads(self):
         client = WebClient()
         client.chat_postMessage = MagicMock()
 
@@ -96,7 +96,7 @@ class HandleMessage(unittest.TestCase):
         thread_ts = client.chat_postMessage.call_args.kwargs.get("thread_ts", "")
         self.assertEqual("thread_ts", thread_ts)
 
-    def testExecutesCommandsInChannels(self):
+    def test_executes_commands_in_channels(self):
         client = WebClient()
         client.chat_postMessage = MagicMock()
 
@@ -117,7 +117,7 @@ class HandleMessage(unittest.TestCase):
         self.assertFalse(thread_ts)
 
 
-    def testTriggers_TriggerWords(self):
+    def test_triggers_trigger_words(self):
         client = WebClient()
         client.chat_postMessage = MagicMock()
 
@@ -134,7 +134,7 @@ class HandleMessage(unittest.TestCase):
             if handled:
                 self.assertEqual(user, client.chat_postMessage.call_args.kwargs.get("user"))
 
-    def testTriggers_UsesThreads(self):
+    def test_triggers_uses_threads(self):
         client = WebClient()
         client.chat_postMessage = MagicMock()
 
