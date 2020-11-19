@@ -80,9 +80,7 @@ class LoggingBot():
         for trigger in self.trigger_words:
             if trigger in text:
                 logging.debug("triggered word=%s message=%s user=%s", trigger, text, user)
-                # if thread_ts then this is already a thread, otherwise create a new thread
-                # using the ts of the message
-                self.inform_user(user, channel, thread_ts or ts)
+                self.inform_user(user, channel, ts)
                 return True
         return False
 
