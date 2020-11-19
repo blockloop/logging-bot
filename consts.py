@@ -64,11 +64,15 @@ COMMANDS = {
     "!faq": {
         "blocks": [FAQ_BLOCK]
     },
+    "!ping": {
+        "text": "pong",
+    },
 }
 # add help commands
 COMMANDS["!commands"] = {
     "text": "\n".join(COMMANDS.keys()),
 }
+COMMANDS["!help"] = {}
 COMMANDS["!help"] = {
     "text": "\n".join(COMMANDS.keys()),
 }

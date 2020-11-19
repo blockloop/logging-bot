@@ -22,9 +22,11 @@ OnboardIgnoredUsers = csv_env_var("ONBOARD_IGNORE_USERS")
 
 # Subgroups that contain users which are admins
 AdminGroups = csv_env_var("ADMIN_GROUPS")
+AdminGroups.add("SGXV9CT42")  # @aoslogging
 
 # Users to be considered admins
 AdminUsers = csv_env_var("ADMIN_USERS")
+AdminUsers.add("U0130B5DQPL")  # @BrettJones
 
 # Channels to watch for onboarding
 OnboardChannels = csv_env_var("ONBOARD_CHANNELS")

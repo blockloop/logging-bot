@@ -1,15 +1,18 @@
 """
 Logging Bot is used in slack for logging team public channels
 """
+import os
 import logging
 from flask import Flask
 from slack_sdk.web import WebClient
 from slackeventsapi import SlackEventAdapter
+from prometheus_flask_exporter import PrometheusMetrics
 import config
 from bot import LoggingBot
 
 # Initialize a Flask app to host the events adapter
 app = Flask(__name__)
+metrics = PrometheusMetrics(app)
 slack_events_adapter = SlackEventAdapter(config.SlackSigningSecret, "/slack/events", app)
 
 # Initialize a Web API client
@@ -19,6 +22,11 @@ slack_client.api_test()
 
 bot = LoggingBot(slack_client, config.TriggerWords, config.OnboardChannels,
                  config.AdminGroups, config.AdminUsers, config.OnboardIgnoredUsers)
+
+
+@app.route("/ping")
+def ping():
+    return 'PONG'
 
 
 # ================ Member Joined Channel Event =============== #
@@ -50,26 +58,21 @@ def on_message(payload):
          env var to limit the scope of the bot.
     """
     event = payload.get("event", {})
+    if "subtype" in event:
+        # message subtypes aren't used. See more here:
+        # https://api.slack.com/events/message#message-event-type__message-subtypes
+        return
     bot.handle_message(**event)
 
 
-@slack_events_adapter.on("subteam_updated")
-def on_subteam_updated(payload):
-    """This event is triggered when a subteam has been updated. We capture this
-    to update the admin users if an admin group has changed
-    """
-    event = payload.get("event", {})
-    subteam = event.get("subteam", {})
-    users = subteam.get("users", [])
-    subteam_id = subteam.get("id", "")
-    bot.handle_subteam_update(subteam_id, users, **event)
-
-
 if __name__ == "__main__":
+    LEVEL = logging.ERROR
+    if os.getenv("FLASK_ENV", "") == "development":
+        LEVEL = logging.DEBUG
     logging.basicConfig(
         format='%(asctime)s %(levelname)-8s %(message)s',
-        level=logging.DEBUG,
+        level=LEVEL,
         datefmt='%Y-%m-%d %H:%M:%S',
         handlers=[logging.StreamHandler()],
     )
-    app.run(port=3000)
+    app.run(port=3000, threaded=True)

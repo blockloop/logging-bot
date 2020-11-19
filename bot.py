@@ -49,10 +49,6 @@ class LoggingBot():
     def handle_message(self, channel: str, user: str, text: str,
                        ts="", thread_ts="", bot_profile="", **kwargs) -> bool:
         """handle a new message"""
-        if self.is_admin(user):
-            logging.debug("ignoring admin message")
-            return False
-
         if bot_profile:
             # this is a bot, possibly myself. Ignore it
             logging.debug("ignoring bot message")
@@ -73,6 +69,10 @@ class LoggingBot():
             # the thread
             self.execute_command(text, user, channel, thread_ts)
             return True
+
+        if self.is_admin(user):
+            logging.debug("ignoring admin message")
+            return False
 
         for trigger in self.trigger_words:
             if trigger in text:

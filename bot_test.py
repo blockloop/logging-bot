@@ -12,47 +12,47 @@ class AnyStringWith(str):
     def __eq__(self, other):
         return self in other
 
-class HandleSubteamUpdate(unittest.TestCase):
-    def test_only_updates_observed_teams(self):
-        team = "myteam"
-        user = "me"
-        channel = "challen_abcd"
+# class HandleSubteamUpdate(unittest.TestCase):
+#     def test_only_updates_observed_teams(self):
+#         team = "myteam"
+#         user = "me"
+#         channel = "challen_abcd"
 
-        tests = [
-            ([], [], False),
-            ([team], [], False),
-            ([], [user], False),
-            ([team], [user], True),
-            ([team], [user, "user2"], True),
-        ]
+#         tests = [
+#             ([], [], False),
+#             ([team], [], False),
+#             ([], [user], False),
+#             ([team], [user], True),
+#             ([team], [user, "user2"], True),
+#         ]
 
-        client = WebClient()
-        client.usergroups_users_list = MagicMock(return_value={"users": []})
-        for observed_groups, new_users, should_update in tests:
-            subject = LoggingBot(client, [], [channel], observed_groups, [], [])
-            subject.handle_subteam_update(team, new_users)
-            if should_update:
-                self.assertEqual(new_users, subject.admin_groups[team])
+#         client = WebClient()
+#         client.usergroups_users_list = MagicMock(return_value={"users": []})
+#         for observed_groups, new_users, should_update in tests:
+#             subject = LoggingBot(client, [], [channel], observed_groups, [], [])
+#             subject.handle_subteam_update(team, new_users)
+#             if should_update:
+#                 self.assertEqual(new_users, subject.admin_groups[team])
 
 
-    def test_only_updates_if_users_and_team_are_provided(self):
-        team = "myteam"
-        user = "me"
-        channel = "challen_abcd"
+#     def test_only_updates_if_users_and_team_are_provided(self):
+#         team = "myteam"
+#         user = "me"
+#         channel = "challen_abcd"
 
-        tests = [
-            ("", [], False),
-            (team, [], False),
-            ("", [user], False),
-            (team, [user], True),
-        ]
+#         tests = [
+#             ("", [], False),
+#             (team, [], False),
+#             ("", [user], False),
+#             (team, [user], True),
+#         ]
 
-        client = WebClient()
-        client.usergroups_users_list = MagicMock(return_value={"users": []})
-        for team, users, should_handle in tests:
-            subject = LoggingBot(client, [], [channel], [team], [], [])
-            handled = subject.handle_subteam_update(team, users)
-            self.assertEqual(should_handle, handled, "Team=%s User=%s" % (team, user))
+#         client = WebClient()
+#         client.usergroups_users_list = MagicMock(return_value={"users": []})
+#         for team, users, should_handle in tests:
+#             subject = LoggingBot(client, [], [channel], [team], [], [])
+#             handled = subject.handle_subteam_update(team, users)
+#             self.assertEqual(should_handle, handled, "Team=%s User=%s" % (team, user))
 
 
 class HandleMessage(unittest.TestCase):
@@ -91,20 +91,33 @@ class HandleMessage(unittest.TestCase):
         self.assertFalse(handled)
         client.chat_postMessage.assert_not_called()
 
+    def test_executes_commands_for_admins(self):
+        client = WebClient()
+        client.chat_postMessage = MagicMock()
+        channel = "channel"
+        user = "@me"
+        subject = LoggingBot(client, [], [channel], [], [user], [])
+        # choose the first command
+        cmd = list(consts.COMMANDS.keys())[0]
+        handled = subject.handle_message(channel, user, cmd, ts="ts", thread_ts="thread_ts")
+        self.assertTrue(handled, "handled message")
+        args = client.chat_postMessage.call_args.kwargs
+        block = consts.COMMANDS[cmd].items()
+        # block is the message text that gets added when the command is called
+        for key, value in block:
+            self.assertIn(key, args, "key=%s" % key)
+            self.assertEqual(value, args[key], "key=%s value=%s" % (key, value))
+
     def test_executes_commands_in_threads(self):
         client = WebClient()
         client.chat_postMessage = MagicMock()
-
         channel = "channel"
         subject = LoggingBot(client, [], [channel], [], [], [])
-
         # choose the first command
         cmd = list(consts.COMMANDS.keys())[0]
         user = "user"
-
         handled = subject.handle_message(channel, user, cmd, ts="ts", thread_ts="thread_ts")
         self.assertTrue(handled)
-
         # because we supplied a thread_ts to handle_message that indicates the
         # message was within an existing thread so we should see thread_ts
         # here.
