@@ -83,13 +83,13 @@ class LoggingBot():
                 return True
         return False
 
-    def handle_subteam_update(self, team: str, users: Set[str], **kwargs):
+    def handle_subteam_update(self, subteam_id: str, users: Set[str], **kwargs):
         """update the admin users list when an admin_group is updated"""
-        logging.debug("subteam_updated", team=team)
-        if not team or not users:
+        if not subteam_id or not users:
             return False
-        if team in self.admin_groups:
-            self.admin_groups[team] = users
+        if subteam_id in self.admin_groups:
+            logging.debug("subteam_updated subteam=%s", subteam_id)
+            self.admin_groups[subteam_id] = users
             return True
         return False
 

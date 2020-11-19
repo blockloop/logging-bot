@@ -58,8 +58,11 @@ def on_subteam_updated(payload):
     """This event is triggered when a subteam has been updated. We capture this
     to update the admin users if an admin group has changed
     """
-    info = payload.get("subteam", {})
-    bot.handle_subteam_update(**info)
+    event = payload.get("event", {})
+    subteam = event.get("subteam", {})
+    users = subteam.get("users", [])
+    subteam_id = subteam.get("id", "")
+    bot.handle_subteam_update(subteam_id, users, **event)
 
 
 if __name__ == "__main__":
