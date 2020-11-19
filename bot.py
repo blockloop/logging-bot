@@ -25,11 +25,13 @@ class LoggingBot():
     onboard_users = set()
 
     def __init__(self, slack_client, trigger_words: Set[str], channels: Set[str],
-                 admin_groups: Set[str], ignored_users: Set[str]):
+                 admin_groups: Set[str], admin_users: Set[str], ignored_users: Set[str]):
         self.slack_client = slack_client
         self.trigger_words = trigger_words
         self.channels = channels
         self.ignored_users = ignored_users
+        # add admin_users to a separate group that will not get updated
+        self.admin_groups["NONE"] = admin_users
 
         # loop through the configured groups and get a list of users in those groups
         # so we can cache the admin users
@@ -43,10 +45,14 @@ class LoggingBot():
                 logging.error("failed to list users for group '%s': Error: '%s'",
                               group, err.response["error"])
 
-    # pylint: disable=invalid-name
+    # pylint: disable=invalid-name # ts is the name of the field slack sends
     def handle_message(self, channel: str, user: str, text: str,
                        ts="", thread_ts="", bot_profile="", **kwargs) -> bool:
         """handle a new message"""
+        if self.is_admin(user):
+            logging.debug("ignoring admin message")
+            return False
+
         if bot_profile:
             # this is a bot, possibly myself. Ignore it
             logging.debug("ignoring bot message")
@@ -70,7 +76,7 @@ class LoggingBot():
 
         for trigger in self.trigger_words:
             if trigger in text:
-                logging.debug("triggered word=%s. Message=%s", trigger, text)
+                logging.debug("triggered word=%s message=%s user=%s", trigger, text, user)
                 # if thread_ts then this is already a thread, otherwise create a new thread
                 # using the ts of the message
                 self.inform_user(user, channel, thread_ts or ts)
@@ -110,7 +116,7 @@ class LoggingBot():
 
     def is_admin(self, user: str) -> bool:
         """check if a user is an admin"""
-        for _, users in self.admin_groups.items():
+        for users in self.admin_groups.values():
             if user in users:
                 return True
         return False

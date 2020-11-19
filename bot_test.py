@@ -29,7 +29,7 @@ class HandleSubteamUpdate(unittest.TestCase):
         client = WebClient()
         client.usergroups_users_list = MagicMock(return_value={"users": []})
         for observed_groups, new_users, should_update in tests:
-            subject = LoggingBot(client, [], [channel], observed_groups, [])
+            subject = LoggingBot(client, [], [channel], observed_groups, [], [])
             subject.handle_subteam_update(team, new_users)
             if should_update:
                 self.assertEqual(new_users, subject.admin_groups[team])
@@ -50,18 +50,33 @@ class HandleSubteamUpdate(unittest.TestCase):
         client = WebClient()
         client.usergroups_users_list = MagicMock(return_value={"users": []})
         for team, users, should_handle in tests:
-            subject = LoggingBot(client, [], [channel], [team], [])
+            subject = LoggingBot(client, [], [channel], [team], [], [])
             handled = subject.handle_subteam_update(team, users)
             self.assertEqual(should_handle, handled, "Team=%s User=%s" % (team, user))
 
 
 class HandleMessage(unittest.TestCase):
+    def test_ignores_admin_messages(self):
+        client = WebClient()
+        client.chat_postMessage = MagicMock()
+        logging.debug = MagicMock()
+
+        user = "me"
+        trigger_word = "triggered!"
+        channel = "channel_8"
+
+        subject = LoggingBot(client, [trigger_word], [channel], [], [user], [])
+        handled = subject.handle_message(channel, user, "text")
+        self.assertFalse(handled)
+        client.chat_postMessage.assert_not_called()
+        logging.debug.assert_called_with(AnyStringWith("admin"))
+
     def test_ignores_bot_messages(self):
         client = WebClient()
         client.chat_postMessage = MagicMock()
         logging.debug = MagicMock()
 
-        subject = LoggingBot(client, [], [], [], [])
+        subject = LoggingBot(client, [], [], [], [], [])
         handled = subject.handle_message("channel", "user", "text", bot_profile="bot_profile")
         self.assertFalse(handled)
         client.chat_postMessage.assert_not_called()
@@ -71,7 +86,7 @@ class HandleMessage(unittest.TestCase):
         client = WebClient()
         client.chat_postMessage = MagicMock()
 
-        subject = LoggingBot(client, [], ["MONITORED"], [], [])
+        subject = LoggingBot(client, [], ["MONITORED"], [], [], [])
         handled = subject.handle_message("NOT_MONITORED", "user", "text", bot_profile="bot_profile")
         self.assertFalse(handled)
         client.chat_postMessage.assert_not_called()
@@ -81,7 +96,7 @@ class HandleMessage(unittest.TestCase):
         client.chat_postMessage = MagicMock()
 
         channel = "channel"
-        subject = LoggingBot(client, [], [channel], [], [])
+        subject = LoggingBot(client, [], [channel], [], [], [])
 
         # choose the first command
         cmd = list(consts.COMMANDS.keys())[0]
@@ -101,7 +116,7 @@ class HandleMessage(unittest.TestCase):
         client.chat_postMessage = MagicMock()
 
         channel = "channel"
-        subject = LoggingBot(client, [], [channel], [], [])
+        subject = LoggingBot(client, [], [channel], [], [], [])
 
         # choose the first command
         cmd = list(consts.COMMANDS.keys())[0]
@@ -126,7 +141,7 @@ class HandleMessage(unittest.TestCase):
         trigger_words = ["help me"]
 
         for msg, should_handle in [("good morning", False), ("help", False), ("help me", True)]:
-            subject = LoggingBot(client, trigger_words, [channel], [], [])
+            subject = LoggingBot(client, trigger_words, [channel], [], [], [])
 
             handled = subject.handle_message(channel, user, msg, ts="ts")
             self.assertEqual(should_handle, handled, msg="Message=%s" % msg)
@@ -142,7 +157,7 @@ class HandleMessage(unittest.TestCase):
         channel = "channel"
         trigger_word = "help me"
 
-        subject = LoggingBot(client, [trigger_word], [channel], [], [])
+        subject = LoggingBot(client, [trigger_word], [channel], [], [], [])
 
         handled = subject.handle_message(channel, user, trigger_word, ts="ts")
         self.assertEqual(True, handled)

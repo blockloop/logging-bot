@@ -18,7 +18,7 @@ slack_client = WebClient(token=config.SlackBotToken)
 slack_client.api_test()
 
 bot = LoggingBot(slack_client, config.TriggerWords, config.OnboardChannels,
-                 config.OnboardAdminGroups, config.IgnoredUsers)
+                 config.AdminGroups, config.AdminUsers, config.OnboardIgnoredUsers)
 
 
 # ================ Member Joined Channel Event =============== #
