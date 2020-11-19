@@ -162,20 +162,27 @@ class HandleMessage(unittest.TestCase):
             if handled:
                 self.assertEqual(user, client.chat_postMessage.call_args.kwargs.get("user"))
 
-    def test_triggers_uses_threads(self):
+    def test_triggers_replies_in_a_thread(self):
         client = WebClient()
         client.chat_postMessage = MagicMock()
-
         user = "user"
         channel = "channel"
         trigger_word = "help me"
-
         subject = LoggingBot(client, [trigger_word], [channel], [], [], [])
-
         handled = subject.handle_message(channel, user, trigger_word, ts="ts")
-        self.assertEqual(True, handled)
-
+        self.assertTrue(handled)
         self.assertNotEqual("", client.chat_postMessage.call_args.kwargs.get("thread_ts", ""))
+
+    def test_triggers_does_not_trigger_in_threads(self):
+        client = WebClient()
+        client.chat_postMessage = MagicMock()
+        user = "user"
+        channel = "channel"
+        trigger_word = "help me"
+        subject = LoggingBot(client, [trigger_word], [channel], [], [], [])
+        handled = subject.handle_message(channel, user, trigger_word, thread_ts="ts")
+        self.assertFalse(handled)
+        client.chat_postMessage.assert_not_called()
 
 
 if __name__ == '__main__':

@@ -74,6 +74,9 @@ class LoggingBot():
             logging.debug("ignoring admin message")
             return False
 
+        if thread_ts:
+            # don't trigger words in threads
+            return False
         for trigger in self.trigger_words:
             if trigger in text:
                 logging.debug("triggered word=%s message=%s user=%s", trigger, text, user)
